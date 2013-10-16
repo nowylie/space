@@ -1,4 +1,3 @@
-#include "common.h"
 #include "render_thread.h"
 
 #include <cairo.h>
@@ -15,7 +14,7 @@ void* render_function(void* param)
 	
 	context = cairo_create(server->output);
 	
-	cairo_set_source_rgb(context, 0.5, 0.5, 0.5);
+	cairo_set_source_rgb(context, 0.0, 1.0, 0.0);
 	cairo_paint(context);
 	XFlush(server->conn);
 	

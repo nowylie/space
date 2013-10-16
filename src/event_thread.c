@@ -1,4 +1,3 @@
-#include "common.h"
 #include "event_thread.h"
 
 void* event_function(void* param)

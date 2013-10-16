@@ -1,3 +1,5 @@
+#include "common.h"
+
 #ifndef _RENDER_THREAD_H_
 #define _RENDER_THREAD_H_
 
