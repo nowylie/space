@@ -13,6 +13,7 @@ struct scene_obj {
 };
 
 typedef struct {
+	bool zoom;
 	scene_obj *hlist;
 	scene_obj *vlist;
 } scene_t;

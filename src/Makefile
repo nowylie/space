@@ -1,9 +1,9 @@
 # C Compiler
 CC = gcc
 # C Flags
-CFLAGS=-Wall -ansi -g `pkg-config --cflags x11 xcomposite xrender`
+CFLAGS=-Wall -g `pkg-config --cflags x11 xext xcomposite xrender xfixes`
 # LD Flags
-LDFLAGS=-lpthread `pkg-config --libs x11 xcomposite xrender` 
+LDFLAGS=-lpthread `pkg-config --libs x11 xext xcomposite xrender xfixes`
 # Objects
 OBJS=render_thread.o event_thread.o window_hash.o scene.o
 

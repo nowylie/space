@@ -6,6 +6,8 @@
 
 void process_opts(int, char**);
 
+void allow_input_passthrough(server_t *server, Window w);
+
 int main(int argc, char** argv)
 {
 	server_t server;
@@ -33,6 +35,8 @@ int main(int argc, char** argv)
 	XGetWindowAttributes(server.conn, server.root, &attribs);
 	
 	server.overlay = XCompositeGetOverlayWindow(server.conn, server.root);
+	
+	allow_input_passthrough(&server, server.overlay);
 	
 	server.visual = attribs.visual;
 	server.width = attribs.width;
@@ -65,4 +69,14 @@ int main(int argc, char** argv)
 void process_opts(int argc, char** argv)
 {
 	
+}
+
+void allow_input_passthrough(server_t *server, Window w)
+{
+	XserverRegion region = XFixesCreateRegion(server->conn, NULL, 0);
+	
+	XFixesSetWindowShapeRegion(server->conn, w, ShapeBounding, 0, 0, 0);
+	XFixesSetWindowShapeRegion(server->conn, w, ShapeInput, 0, 0, region);
+	
+	XFixesDestroyRegion(server->conn, region);
 }

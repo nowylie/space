@@ -6,6 +6,7 @@ void scene_init()
 {
 	scene = malloc(sizeof(scene_t));
 	
+	scene->zoom = FALSE;
 	scene->hlist = NULL;
 	scene->vlist = NULL;
 }

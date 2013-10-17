@@ -26,9 +26,12 @@ void* event_function(void* param)
 			
 			remove_window(w);
 		} else if (ev.type == MapNotify) {
+			XRenderPictFormat *format;
+			XRenderPictureAttributes pa;
 			XWindowAttributes attr;
 			scene_obj *obj;
 			window_t *w;
+			
 			
 			w = get_window(ev.xmap.window);
 			
@@ -42,6 +45,13 @@ void* event_function(void* param)
 			w->y = attr.y;
 			w->width = attr.width;
 			w->height = attr.height;
+			
+			format = XRenderFindVisualFormat(server->conn, attr.visual);
+			pa.subwindow_mode = IncludeInferiors;
+
+			w->picture = XRenderCreatePicture(server->conn, w->store,
+				format, CPSubwindowMode, &pa);
+			
 			/* Add the window to the rendering space */
 			obj = malloc(sizeof(scene_obj));
 			
@@ -56,6 +66,7 @@ void* event_function(void* param)
 			
 			w = get_window(ev.xunmap.window);
 			
+			XRenderFreePicture(server->conn, w->picture);
 			XFreePixmap(server->conn, w->store);
 
 			w->store = None;
