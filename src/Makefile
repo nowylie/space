@@ -1,13 +1,13 @@
 # C Compiler
 CC = gcc
 # C Flags
-CFLAGS=-Wall -ansi -g `pkg-config --cflags x11 xcomposite cairo`
+CFLAGS=-Wall -ansi -g `pkg-config --cflags x11 xcomposite xrender`
 # LD Flags
-LDFLAGS=-lpthread `pkg-config --libs x11 xcomposite cairo` 
+LDFLAGS=-lpthread `pkg-config --libs x11 xcomposite xrender` 
 # Objects
-OBJS=render_thread.o event_thread.o window_hash.o
+OBJS=render_thread.o event_thread.o window_hash.o scene.o
 
-all: main render_thread event_thread window_hash
+all: main render_thread event_thread window_hash scene
 	$(CC) -o space $(CFLAGS) main.o $(OBJS) $(LDFLAGS)
 
 main: common.h main.c
@@ -21,6 +21,9 @@ event_thread: common.h event_thread.h event_thread.c
 
 window_hash: common.h window_hash.h window_hash.c
 	$(CC) -c window_hash.c $(CFLAGS)
+
+scene: common.h scene.h scene.c
+	$(CC) -c scene.c $(CFLAGS)
 
 test: all test.c
 	$(CC) -o test test.c $(CFLAGS) $(OBJS) $(LDFLAGS)

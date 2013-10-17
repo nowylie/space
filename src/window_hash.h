@@ -7,12 +7,13 @@
 typedef struct {
 	Window id;
 	Pixmap store;
-	cairo_surface_t *surface;
+	Picture picture;
 	int width, height;
+	int x, y;
 	UT_hash_handle hh;
 } window_t;
 
-void add_window(Window id, int width, int height);
+void add_window(Window id);
 window_t *get_window(Window id);
 void remove_window(window_t *w);
 

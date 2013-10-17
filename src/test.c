@@ -1,24 +1,44 @@
-#include "window_hash.h"
+#include "common.h"
+#include "scene.h"
 
 int main()
 {
-	Window root, overlay;
-	window_t *w;
-	Display *dsp = XOpenDisplay(NULL);
-	if (dsp == NULL)
-		exit(EXIT_FAILURE);
+	scene_obj *first, *second, *third, *temp;
 	
-	root = DefaultRootWindow(dsp);
+	scene_init();
 	
-	printf("Root window at: %lu\n", root);
+	first = malloc(sizeof(scene_obj));
+	second = malloc(sizeof(scene_obj));
+	third = malloc(sizeof(scene_obj));
 	
-	add_window(root);
+	first->id = 1;
+	first->centre = -15;
+	second->id = 2;
+	second->centre = 10;
+	third->id = 3;
+	third->centre = 32;
 	
-	w = get_window(root);
+	scene_add_object(second);
+	scene_add_object(first);
+	scene_add_object(third);
 	
-	printf("Root window structure %p has id %lu\n", w, w->id);
+	temp = scene->hlist;
 	
-	remove_window(w);
+	while (temp != NULL) {
+		printf("Window centre at x position: %d\n", temp->centre);
+		temp = temp->next;
+	}
+	
+	temp = scene_drop_object(1);
+	free(temp);
+	
+	temp = scene_drop_object(2);
+	free(temp);
+	
+	temp = scene_drop_object(3);
+	free(temp);
+	
+	scene_free();
 	
 	return EXIT_SUCCESS;
 }

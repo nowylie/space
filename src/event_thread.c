@@ -1,7 +1,6 @@
 #include "event_thread.h"
 #include "window_hash.h"
-
-#include <X11/extensions/Xcomposite.h>
+#include "scene.h"
 
 void* event_function(void* param)
 {
@@ -16,15 +15,11 @@ void* event_function(void* param)
 	{
 		XNextEvent(server->conn, &ev);
 		if (ev.type == CreateNotify) {
-			add_window(ev.xcreatewindow.window, ev.xcreatewindow.width,
-				ev.xcreatewindow.height);
+			add_window(ev.xcreatewindow.window);
 		} else if (ev.type == DestroyNotify) {
 			window_t *w;
 			
 			w = get_window(ev.xdestroywindow.window);
-			
-			if (w->surface != NULL)
-				cairo_surface_destroy(w->surface);
 			
 			if (w->store != None)
 				XFreePixmap(server->conn, w->store);
@@ -32,6 +27,7 @@ void* event_function(void* param)
 			remove_window(w);
 		} else if (ev.type == MapNotify) {
 			XWindowAttributes attr;
+			scene_obj *obj;
 			window_t *w;
 			
 			w = get_window(ev.xmap.window);
@@ -42,22 +38,32 @@ void* event_function(void* param)
 			XGetWindowAttributes(server->conn, ev.xmap.window,
 				&attr);
 			
-			w->surface = cairo_xlib_surface_create(server->conn,
-				w->store, attr.visual, w->width, w->height);
-			
+			w->x = attr.x;
+			w->y = attr.y;
+			w->width = attr.width;
+			w->height = attr.height;
 			/* Add the window to the rendering space */
+			obj = malloc(sizeof(scene_obj));
+			
+			obj->id = ev.xmap.window;
+			obj->edge = attr.width / 2;
+			obj->centre = attr.x + obj->edge;
+			
+			scene_add_object(obj);
 		} else if (ev.type == UnmapNotify) {
+			scene_obj *obj;
 			window_t *w;
 			
 			w = get_window(ev.xunmap.window);
 			
-			cairo_surface_destroy(w->surface);
 			XFreePixmap(server->conn, w->store);
-			
-			w->surface = NULL;
+
 			w->store = None;
+			
+			/* Remove the window from the rendering space */
+			obj = scene_drop_object(ev.xunmap.window);
+			free(obj);
 		}
-		
 		printf("[event] Event of type %d received.\n", ev.type);
 	}
 	

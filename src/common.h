@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <cairo.h>
-#include <cairo-xlib.h>
 #include <X11/Xlib.h>
+#include <X11/extensions/Xrender.h>
+#include <X11/extensions/Xcomposite.h>
+
+#include <pthread.h>
 
 #ifndef _COMMON_H_
 #define _COMMON_H_
@@ -16,7 +18,7 @@ typedef struct {
 	Display *conn;
 	Window root, overlay;
 	Visual *visual;
-	cairo_surface_t *output;
+	Picture output;
 	int width, height;
 } server_t;
 

@@ -1,11 +1,8 @@
 #include "common.h"
 
-#include <X11/extensions/Xcomposite.h>
-
-#include <pthread.h>
-
 #include "render_thread.h"
 #include "event_thread.h"
+#include "scene.h"
 
 void process_opts(int, char**);
 
@@ -14,6 +11,8 @@ int main(int argc, char** argv)
 	server_t server;
 	pthread_t event_thread, render_thread;
 	XWindowAttributes attribs;
+	XRenderPictFormat *format;
+	XRenderPictureAttributes pa;
 	
 	process_opts(argc, argv);
 	
@@ -28,6 +27,8 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 	
+	scene_init();
+	
 	server.root = DefaultRootWindow(server.conn);
 	XGetWindowAttributes(server.conn, server.root, &attribs);
 	
@@ -37,8 +38,11 @@ int main(int argc, char** argv)
 	server.width = attribs.width;
 	server.height = attribs.height;
 	
-	server.output = cairo_xlib_surface_create(server.conn, server.overlay,
-			server.visual, server.width, server.height);
+	format = XRenderFindVisualFormat(server.conn, server.visual);
+	pa.subwindow_mode = IncludeInferiors;
+
+	server.output = XRenderCreatePicture(server.conn, server.overlay,
+		format, CPSubwindowMode, &pa);
 	
 	printf("[main] Connection opened to server.\n");
 	printf("[main] Root window [%lu] found.\n", server.root);
