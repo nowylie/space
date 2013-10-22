@@ -23,4 +23,28 @@ typedef struct {
 	int width, height;
 } server_t;
 
+typedef struct object object_t;
+
+struct object {
+	Window id;
+	int width, height;
+	int x, y;
+	Pixmap back_pixmap, buff_pixmap;
+	Picture back_picture, buff_picture;
+	object_t *prev, *next;
+};
+
+typedef struct {
+	int width, height;
+	int x, y, zoom;
+	object_t *centre;
+	Pixmap buff_pixmap;
+	Picture buff_picture;
+} viewport_t;
+
+typedef struct {
+	object_t *objects;
+	viewport_t *viewport;
+} scene_t;
+
 #endif
