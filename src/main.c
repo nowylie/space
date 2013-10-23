@@ -1,18 +1,32 @@
 #include "common.h"
 
-#include "render_thread.h"
 #include "event_thread.h"
+#include "render_thread.h"
+
 #include "scene.h"
+#include "viewport.h"
+
+XRenderColor green = (XRenderColor){.alpha = 0xffff, .red = 0x0000, .green = 0xffff, .blue = 0x0000};
+XRenderColor blue = (XRenderColor){.alpha = 0xffff, .red = 0x0000, .green = 0x0000, .blue = 0xffff};
+
+Display *conn = NULL;
+Visual *visual = NULL;
+unsigned width, height, depth;
+Picture output = None;
+scene_t *scene = NULL;
+
+pthread_mutex_t scene_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t scene_dirty = PTHREAD_COND_INITIALIZER;
 
 void process_opts(int, char**);
 
-void allow_input_passthrough(server_t *server, Window w);
+void allow_input_passthrough(Window overlay);
 
 int main(int argc, char** argv)
 {
-	server_t server;
 	pthread_t event_thread, render_thread;
-	XWindowAttributes attribs;
+	Window root, overlay;
+	XWindowAttributes attr;
 	XRenderPictFormat *format;
 	XRenderPictureAttributes pa;
 	
@@ -23,45 +37,48 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 	
-	server.conn = XOpenDisplay(NULL);
-	if (server.conn == NULL) {
+	conn = XOpenDisplay(NULL);
+	if (conn == NULL) {
 		fprintf(stderr, "[main] Could not connect to server.\n");
 		exit(EXIT_FAILURE);
 	}
 	
-	scene_init();
+	visual = DefaultVisual(conn, DefaultScreen(conn));
 	
-	server.root = DefaultRootWindow(server.conn);
-	XGetWindowAttributes(server.conn, server.root, &attribs);
+	root = DefaultRootWindow(conn);
+	XGetWindowAttributes(conn, root, &attr);
 	
-	server.overlay = XCompositeGetOverlayWindow(server.conn, server.root);
+	width = attr.width;
+	height = attr.height;
+	depth = attr.depth;
+	printf("Depth: %d\n", depth);
 	
-	allow_input_passthrough(&server, server.overlay);
+	overlay = XCompositeGetOverlayWindow(conn, root);
 	
-	server.visual = attribs.visual;
-	server.width = attribs.width;
-	server.height = attribs.height;
+	allow_input_passthrough(overlay);
 	
-	format = XRenderFindVisualFormat(server.conn, server.visual);
+	scene = scene_create();
+	
+	format = XRenderFindVisualFormat(conn, attr.visual);
 	pa.subwindow_mode = IncludeInferiors;
 
-	server.output = XRenderCreatePicture(server.conn, server.overlay,
-		format, CPSubwindowMode, &pa);
+	output = XRenderCreatePicture(conn, overlay, format,
+			CPSubwindowMode, &pa);
 	
 	printf("[main] Connection opened to server.\n");
-	printf("[main] Root window [%lu] found.\n", server.root);
-	printf("[main] Overlay window [%lu] found.\n", server.overlay);
-	printf("\t screen size: %dx%d\n", server.width, server.height);
+	printf("[main] Root window [%lu] found.\n", root);
+	printf("[main] Overlay window [%lu] found.\n", overlay);
+	printf("\t screen size: %dx%d\n", attr.width, attr.height);
 	
-	XCompositeRedirectSubwindows(server.conn, server.root, CompositeRedirectManual);
+	XCompositeRedirectSubwindows(conn, root, CompositeRedirectManual);
 	
-	pthread_create(&render_thread, NULL, &render_function, &server);
-	pthread_create(&event_thread, NULL, &event_function, &server);
+	pthread_create(&render_thread, NULL, &render_function, NULL);
+	pthread_create(&event_thread, NULL, &event_function, NULL);
 	
 	pthread_join(render_thread, NULL);
 	pthread_join(event_thread, NULL);
 	
-	XCloseDisplay(server.conn);
+	XCloseDisplay(conn);
 	
 	return EXIT_SUCCESS;
 }
@@ -71,12 +88,12 @@ void process_opts(int argc, char** argv)
 	
 }
 
-void allow_input_passthrough(server_t *server, Window w)
+void allow_input_passthrough(Window overlay)
 {
-	XserverRegion region = XFixesCreateRegion(server->conn, NULL, 0);
+	XserverRegion region = XFixesCreateRegion(conn, NULL, 0);
 	
-	XFixesSetWindowShapeRegion(server->conn, w, ShapeBounding, 0, 0, 0);
-	XFixesSetWindowShapeRegion(server->conn, w, ShapeInput, 0, 0, region);
+	XFixesSetWindowShapeRegion(conn, overlay, ShapeBounding, 0, 0, 0);
+	XFixesSetWindowShapeRegion(conn, overlay, ShapeInput, 0, 0, region);
 	
-	XFixesDestroyRegion(server->conn, region);
+	XFixesDestroyRegion(conn, region);
 }

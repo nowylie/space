@@ -1,81 +1,73 @@
 #include "event_thread.h"
-#include "window_hash.h"
+
 #include "scene.h"
+#include "viewport.h"
+#include "object.h"
 
 void* event_function(void* param)
 {
-	server_t *server = (server_t*)param;
+	int damage_event, damage_error;
 	XEvent ev;
 	
 	printf("[event] thread started.\n");
 	
-	XSelectInput(server->conn, server->root, SubstructureNotifyMask);
+	XDamageQueryExtension(conn, &damage_event, &damage_error);
+	
+	XSelectInput(conn, DefaultRootWindow(conn), SubstructureNotifyMask);
 
 	while (1)
 	{
-		XNextEvent(server->conn, &ev);
-		if (ev.type == CreateNotify) {
-			add_window(ev.xcreatewindow.window);
-		} else if (ev.type == DestroyNotify) {
-			window_t *w;
-			
-			w = get_window(ev.xdestroywindow.window);
-			
-			if (w->store != None)
-				XFreePixmap(server->conn, w->store);
-			
-			remove_window(w);
-		} else if (ev.type == MapNotify) {
-			XRenderPictFormat *format;
-			XRenderPictureAttributes pa;
-			XWindowAttributes attr;
-			scene_obj *obj;
-			window_t *w;
-			
-			
-			w = get_window(ev.xmap.window);
-			
-			w->store = XCompositeNameWindowPixmap(server->conn,
-				ev.xmap.window);
-			
-			XGetWindowAttributes(server->conn, ev.xmap.window,
-				&attr);
-			
-			w->x = attr.x;
-			w->y = attr.y;
-			w->width = attr.width;
-			w->height = attr.height;
-			
-			format = XRenderFindVisualFormat(server->conn, attr.visual);
-			pa.subwindow_mode = IncludeInferiors;
-
-			w->picture = XRenderCreatePicture(server->conn, w->store,
-				format, CPSubwindowMode, &pa);
-			
-			/* Add the window to the rendering space */
-			obj = malloc(sizeof(scene_obj));
-			
-			obj->id = ev.xmap.window;
-			obj->edge = attr.width / 2;
-			obj->centre = attr.x + obj->edge;
-			
-			scene_add_object(obj);
-		} else if (ev.type == UnmapNotify) {
-			scene_obj *obj;
-			window_t *w;
-			
-			w = get_window(ev.xunmap.window);
-			
-			XRenderFreePicture(server->conn, w->picture);
-			XFreePixmap(server->conn, w->store);
-
-			w->store = None;
-			
-			/* Remove the window from the rendering space */
-			obj = scene_drop_object(ev.xunmap.window);
-			free(obj);
-		}
+		XNextEvent(conn, &ev);
+		
 		printf("[event] Event of type %d received.\n", ev.type);
+		
+		if (ev.type == CreateNotify) {
+			printf("[event] Creating object with id: %lu\n", ev.xcreatewindow.window);
+			object_create(ev.xcreatewindow);
+		} else if (ev.type == DestroyNotify) {
+			object_t *object;
+			
+			object = object_destroy(ev.xdestroywindow);
+			free(object);
+		} else if (ev.type == ConfigureNotify) {
+			object_configure(ev.xconfigure);
+		} else if (ev.type == MapNotify) {
+			object_t *object;
+			
+			printf("[event] Mapping object with id: %lu\n", ev.xmap.window);
+			
+			/* Set the scene state to dirty and wake up the render thread */
+			pthread_mutex_lock(&scene_mutex);
+			
+			object = object_map(ev.xmap);
+			scene_add_object(scene, object);
+			scene->dirty = TRUE;
+			
+			pthread_cond_signal(&scene_dirty);
+			pthread_mutex_unlock(&scene_mutex);
+		} else if (ev.type == UnmapNotify) {
+			object_t *object;
+			
+			pthread_mutex_lock(&scene_mutex);
+			
+			object = object_unmap(ev.xunmap);
+			scene_remove_object(scene, object);
+			scene->dirty = TRUE;
+			
+			pthread_cond_signal(&scene_dirty);
+			pthread_mutex_unlock(&scene_mutex);
+		} else if (ev.type == damage_event + XDamageNotify) {
+			XDamageNotifyEvent *devent = (XDamageNotifyEvent*)&ev;
+			XDamageSubtract(conn, devent->damage, None, None);
+		
+			printf("[event] Received damage event, marking scene dirty.\n");
+			
+			/* Set the scene state to dirty and wake up the render thread */
+			pthread_mutex_lock(&scene_mutex);
+			scene->dirty = TRUE;
+			pthread_cond_signal(&scene_dirty);
+			pthread_mutex_unlock(&scene_mutex);
+		}
 	}
 	
 	printf("[event] thread stopped.\n");

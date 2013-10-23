@@ -1,78 +1,65 @@
 #include "scene.h"
 
-scene_t *scene = NULL;
-
-void scene_init()
+scene_t *scene_create()
 {
-	scene = malloc(sizeof(scene_t));
+	scene_t *scene = malloc(sizeof(scene_t));
 	
-	scene->zoom = FALSE;
-	scene->hlist = NULL;
-	scene->vlist = NULL;
+	if (scene == NULL)
+		return NULL;
+	
+	scene->objects = NULL;
+	scene->viewport = NULL;
+	scene->dirty = TRUE;
+	
+	return scene;
 }
 
-void scene_free()
+void scene_add_object(scene_t *scene, object_t *object)
 {
-	free(scene);
-}
-
-void scene_add_object(scene_obj *obj)
-{
-	scene_obj *current = scene->hlist;
-	
-	obj->prev = obj->next = NULL;
+	object_t *current = scene->objects;
 	
 	if (current == NULL) {
-		scene->hlist = obj;
+		scene->objects = object;
+		scene->viewport->start = object;
 		return;
-	} else if (current->centre >= obj->centre) {
-		obj->next = current;
-		current->prev = obj;
-		scene->hlist = obj;
+	} else if (current->x + (current->width / 2) >= 
+				object->x + (object->width / 2)) {
+		object->next = current;
+		current->prev = object;
+		scene->objects = object;
+		scene->viewport->start = object;
 		return;
 	}
 	
 	while (current != NULL) {
-		if (current->centre >= obj->centre) {
-			/* obj goes first */
-			obj->next = current;
-			obj->prev = current->prev;
-			current->prev->next = obj;
-			current->prev = obj;
+		if (current->x + (current->width / 2) >= 
+				object->x + (object->width / 2)) {
+			object->next = current;
+			object->prev = current->prev;
+			object->prev->next = object;
+			current->prev = object;
 			return;
 		} else {
 			if (current->next == NULL) {
-				current->next = obj;
-				obj->prev = current;
+				current->next = object;
+				object->prev = current;
 				return;
-			}/* go to next item */
+			}
 			current = current->next;
 		}
 	}
 }
 
-scene_obj *scene_get_nearest(scene_obj *head, int position)
+void scene_remove_object(scene_t *scene, object_t *object)
 {
-	return NULL;
-}
-
-scene_obj *scene_drop_object(Window id)
-{
-	scene_obj *current = scene->hlist;
-	
-	while (current != NULL) {
-		if (current->id == id) {
-			scene_obj *temp = current;
-			if (current->prev != NULL)
-				current->prev->next = temp->next;
-			
-			if (current->next != NULL)
-				current->next->prev = temp->prev;
-				
-			return temp;
-		}
-		current = current->next;
+	if (object->prev == NULL) {
+		if (object->next != NULL)
+			object->next->prev = NULL;
+		scene->objects = object->next;
+		scene->viewport->start = object->next;
+	} else {
+		if (object->next != NULL)
+			object->next->prev = object->prev;
+		object->prev->next = object->next;
 	}
-	
-	return NULL;
 }
