@@ -5,18 +5,16 @@
 
 #include "scene.h"
 #include "viewport.h"
+#include "window.h"
 
 XRenderColor green = (XRenderColor){.alpha = 0xffff, .red = 0x0000, .green = 0xffff, .blue = 0x0000};
 XRenderColor blue = (XRenderColor){.alpha = 0xffff, .red = 0x0000, .green = 0x0000, .blue = 0xffff};
+XRenderColor black = (XRenderColor){.alpha = 0xffff, .red = 0x0000, .green = 0x0000, .blue = 0x0000};
 
 Display *conn = NULL;
 Visual *visual = NULL;
 unsigned width, height, depth;
 Picture output = None;
-scene_t *scene = NULL;
-
-pthread_mutex_t scene_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t scene_dirty = PTHREAD_COND_INITIALIZER;
 
 void process_opts(int, char**);
 
@@ -24,18 +22,12 @@ void allow_input_passthrough(Window overlay);
 
 int main(int argc, char** argv)
 {
-	pthread_t event_thread, render_thread;
 	Window root, overlay;
 	XWindowAttributes attr;
 	XRenderPictFormat *format;
 	XRenderPictureAttributes pa;
 	
 	process_opts(argc, argv);
-	
-	if (XInitThreads() == FALSE) {
-		fprintf(stderr, "[main] Server does not support threads.\n");
-		exit(EXIT_FAILURE);
-	}
 	
 	conn = XOpenDisplay(NULL);
 	if (conn == NULL) {
@@ -57,8 +49,6 @@ int main(int argc, char** argv)
 	
 	allow_input_passthrough(overlay);
 	
-	scene = scene_create();
-	
 	format = XRenderFindVisualFormat(conn, attr.visual);
 	pa.subwindow_mode = IncludeInferiors;
 
@@ -72,11 +62,10 @@ int main(int argc, char** argv)
 	
 	XCompositeRedirectSubwindows(conn, root, CompositeRedirectManual);
 	
-	pthread_create(&render_thread, NULL, &render_function, NULL);
-	pthread_create(&event_thread, NULL, &event_function, NULL);
+	window_list_populate();
 	
-	pthread_join(render_thread, NULL);
-	pthread_join(event_thread, NULL);
+	/* Begin event processing */
+	event_function();
 	
 	XCloseDisplay(conn);
 	

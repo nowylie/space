@@ -7,8 +7,6 @@
 #include <X11/extensions/Xdamage.h>
 #include <X11/extensions/shape.h>
 
-#include <pthread.h>
-
 #include "uthash.h"
 
 #ifndef _COMMON_H_
@@ -20,6 +18,21 @@ typedef char bool;
 
 extern XRenderColor green;
 extern XRenderColor blue;
+extern XRenderColor black;
+
+typedef struct window_def window_t;
+
+struct window_def {
+	Window id;
+	int x, y;
+	unsigned width, height;
+	Pixmap pixmap;
+	Picture picture;
+	bool mapped;
+	bool dirty;
+	window_t *prev, *next;
+	UT_hash_handle hh;
+};
 
 typedef struct object object_t;
 
@@ -54,9 +67,5 @@ extern Display *conn;
 extern Visual *visual;
 extern unsigned width, height, depth;
 extern Picture output;
-extern scene_t *scene;
-
-extern pthread_mutex_t scene_mutex;
-extern pthread_cond_t scene_dirty;
 
 #endif

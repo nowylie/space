@@ -3,75 +3,78 @@
 #include "scene.h"
 #include "viewport.h"
 #include "object.h"
+#include "window.h"
 
-void* event_function(void* param)
+void event_function()
 {
 	int damage_event, damage_error;
+	Pixmap buffer_pixmap;
+	Picture buffer;
+	XRenderPictFormat *format;
 	XEvent ev;
 	
-	printf("[event] thread started.\n");
+	printf("[event] function started.\n");
 	
 	XDamageQueryExtension(conn, &damage_event, &damage_error);
 	
 	XSelectInput(conn, DefaultRootWindow(conn), SubstructureNotifyMask);
-
+	
+	/* Create the buffer pixmap/picture for drawing onto. After each drawing
+		operation, we will copy this onto the overlay window. */
+   buffer_pixmap = XCreatePixmap(conn, DefaultRootWindow(conn), width, height,
+			depth);
+	
+	format = XRenderFindStandardFormat(conn, PictStandardRGB24);
+	
+	buffer = XRenderCreatePicture(conn, buffer_pixmap, format, 0, NULL);
+	
+	/* clear the output window */
+	XRenderFillRectangle(conn, PictOpSrc, buffer, &black,	0, 0, width, height);
+	XRenderComposite(conn, PictOpSrc, buffer, None, output, 0, 0, 0, 0, 0, 0,
+						width, height);
+	XFlush(conn);
+	printf("[event] test.\n");
 	while (1)
 	{
+		/*while (XCheckTypedEvent(conn, DestroyNotify, &ev) == True) {
+			printf("[event] window %lu destroyed.\n", ev.xdestroywindow.window);
+			window_destroy(ev.xdestroywindow.window);
+		}
+		while (XCheckTypedEvent(conn, ReparentNotify, &ev) == True) {
+			printf("[event] window %lu destroyed due to reparenting.\n",
+					ev.xreparent.window);
+			window_destroy(ev.xreparent.window);
+		}*/
+		
 		XNextEvent(conn, &ev);
 		
 		printf("[event] Event of type %d received.\n", ev.type);
-		
-		if (ev.type == ConfigureNotify) {
-			printf("[event] Configurenotify received for window=%lu\n",
-					ev.xconfigure.window);
-			object_configure(ev.xconfigure);
-		} else if (ev.type == ReparentNotify) {
-			object_t *object;
-			object = object_destroy(ev.xreparent.window);
-			printf("[event[ Reparent notify received for window=%lu, parent=%lu\n",
-					ev.xreparent.window, ev.xreparent.parent);
-			free(object);
+		if (ev.type == CreateNotify) {
+			printf("[event] window %lu created.\n", ev.xcreatewindow.window);
+			window_create(ev.xcreatewindow.window);
+		/*} else if (ev.type == DestroyNotify) {
+			printf("[event] window %lu destroyed.\n", ev.xdestroywindow.window);
+			window_destroy(ev.xdestroywindow.window);*/
+		} else if (ev.type == ConfigureNotify) {
+			printf("[event] window %lu configured.\n", ev.xconfigure.window);
+			window_configure(ev.xconfigure);
 		} else if (ev.type == MapNotify) {
-			object_t *object;
-			
-			printf("[event] Mapping object with id: %lu\n", ev.xmap.window);
-			
-			/* Set the scene state to dirty and wake up the render thread */
-			pthread_mutex_lock(&scene_mutex);
-			
-			object = object_map(ev.xmap);
-			scene_add_object(scene, object);
-			scene->dirty = TRUE;
-			
-			pthread_cond_signal(&scene_dirty);
-			pthread_mutex_unlock(&scene_mutex);
+			printf("[event] window %lu mapped.\n", ev.xmap.window);
+			window_set_mapped(ev.xmap.window, TRUE);
+			if (ev.xmap.override_redirect == True)
+				printf("[event] override redirect is true\n");
 		} else if (ev.type == UnmapNotify) {
-			object_t *object;
-			
-			pthread_mutex_lock(&scene_mutex);
-			
-			object = object_unmap(ev.xunmap);
-			scene_remove_object(scene, object);
-			scene->dirty = TRUE;
-			
-			pthread_cond_signal(&scene_dirty);
-			pthread_mutex_unlock(&scene_mutex);
+			printf("[event] window %lu unmapped.\n", ev.xmap.window);
+			window_set_mapped(ev.xunmap.window, FALSE);
 		} else if (ev.type == damage_event + XDamageNotify) {
 			XDamageNotifyEvent *devent = (XDamageNotifyEvent*)&ev;
 			XDamageSubtract(conn, devent->damage, None, None);
-		
-			printf("[event] Received damage event for drawable=%lu, marking scene dirty.\n",
-					devent->drawable);
-			
-			/* Set the scene state to dirty and wake up the render thread */
-			pthread_mutex_lock(&scene_mutex);
-			scene->dirty = TRUE;
-			pthread_cond_signal(&scene_dirty);
-			pthread_mutex_unlock(&scene_mutex);
 		}
+		XRenderFillRectangle(conn, PictOpSrc, buffer, &black,	0, 0, width, height);
+		window_list_draw(buffer);
+		XRenderComposite(conn, PictOpSrc, buffer, None, output, 0, 0, 0, 0, 0, 0,
+						width, height);
 	}
 	
-	printf("[event] thread stopped.\n");
-	
-	return NULL;
+	printf("[event] function ended.\n");
 }

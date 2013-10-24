@@ -5,16 +5,13 @@ CFLAGS=-Wall -g `pkg-config --cflags x11 xext xcomposite xrender xdamage xfixes`
 # LD Flags
 LDFLAGS=-lpthread `pkg-config --libs x11 xext xcomposite xrender xdamage xfixes`
 # Objects
-OBJS=render_thread.o event_thread.o scene.o viewport.o object.o
+OBJS=event_thread.o scene.o viewport.o object.o window.o
 
-all: main render_thread event_thread scene viewport object
+all: main event_thread scene viewport object window
 	$(CC) -o space $(CFLAGS) main.o $(OBJS) $(LDFLAGS)
 
 main: common.h main.c
 	$(CC) -c main.c $(CFLAGS)
-
-render_thread: common.h render_thread.h render_thread.c
-	$(CC) -c render_thread.c $(CFLAGS)
 
 event_thread: common.h event_thread.h event_thread.c
 	$(CC) -c event_thread.c $(CFLAGS)
@@ -27,6 +24,9 @@ viewport: common.h viewport.h viewport.c
 
 object: common.h object.h object.c
 	$(CC) -c object.c $(CFLAGS)
+
+window: common.h window.h window.c
+	$(CC) -c window.c $(CFLAGS)
 
 test: all test.c
 	$(CC) -o test test.c $(CFLAGS) $(OBJS) $(LDFLAGS)
