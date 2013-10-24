@@ -8,17 +8,20 @@ object_t *object_get(Window id)
 	
 	HASH_FIND(hh, object_hash, &id, sizeof(Window), object);
 	
+	if (object == NULL)
+		object = object_create(id);
+	
 	return object;
 }
 
-object_t *object_create(XCreateWindowEvent event)
+object_t *object_create(Window id)
 {
 	object_t *object = malloc(sizeof(object_t));
 	
 	if (object == NULL)
 		return NULL;
 	
-	object->id = event.window;
+	object->id = id;
 	object->x = 0;
 	object->y = 0;
 	object->width = 0;
@@ -33,11 +36,11 @@ object_t *object_create(XCreateWindowEvent event)
 	return object;
 }
 
-object_t *object_destroy(XDestroyWindowEvent event)
+object_t *object_destroy(Window id)
 {
 	object_t *object;
 	
-	object = object_get(event.window);
+	object = object_get(id);
 	
 	HASH_DELETE(hh, object_hash, object);
 	
@@ -53,13 +56,12 @@ object_t *object_configure(XConfigureEvent event)
 	object->x = event.x;
 	object->y = event.y;
 	
-	if (object->width != event.width || object->height != event.height) {
+	/*if (object->width != event.width || object->height != event.height) {*/
 		/* Window size has changed, you may need to resize the picture */
-		object->width = event.width + (event.border_width * 2);
-		object->height = event.height + (event.border_width * 2);
+	object->width = event.width;
+	object->height = event.height;
 		
-		if (object->back_pixmap != None) {
-			/* Free the old picture/pixmap and allocate new ones */
+		/*if (object->back_pixmap != None) {
 			XRenderPictFormat *format;
 			XRenderPictureAttributes pa;
 			
@@ -73,8 +75,8 @@ object_t *object_configure(XConfigureEvent event)
 			
 			object->back_picture = XRenderCreatePicture(conn, object->back_pixmap,
 					format, CPSubwindowMode, &pa);
-		}
-	}
+		}*/
+	/*}*/
 	
 	return object;
 }
@@ -87,14 +89,10 @@ object_t *object_map(XMapEvent event)
 	
 	object = object_get(event.window);
 	
-	/* Need to get the pixmap and create the picture that is now associated
-	 * with this window */
-	object->back_pixmap = XCompositeNameWindowPixmap(conn, object->id);
-	
 	format = XRenderFindVisualFormat(conn, visual);
 	pa.subwindow_mode = IncludeInferiors;
 	
-	object->back_picture = XRenderCreatePicture(conn, object->back_pixmap,
+	object->back_picture = XRenderCreatePicture(conn, object->id,
 			format, CPSubwindowMode, &pa);
 	
 	object->damage = XDamageCreate(conn, object->id, XDamageReportNonEmpty);
@@ -107,9 +105,6 @@ object_t *object_unmap(XUnmapEvent event)
 	object_t *object;
 	
 	object = object_get(event.window);
-	
-	XRenderFreePicture(conn, object->back_picture);
-	XFreePixmap(conn, object->back_pixmap);
 	
 	return object;
 }

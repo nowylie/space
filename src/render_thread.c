@@ -4,14 +4,8 @@
 #include "viewport.h"
 #include "object.h"
 
-#include <time.h>
-
-#define NANO_SECOND_MULTIPLIER 100000
-
 void* render_function(void* param)
 {
-	struct timespec time;
-	
 	printf("[render] thread started.\n");
 	
 	scene->viewport = viewport_create(DefaultRootWindow(conn));

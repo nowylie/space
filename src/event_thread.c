@@ -21,16 +21,16 @@ void* event_function(void* param)
 		
 		printf("[event] Event of type %d received.\n", ev.type);
 		
-		if (ev.type == CreateNotify) {
-			printf("[event] Creating object with id: %lu\n", ev.xcreatewindow.window);
-			object_create(ev.xcreatewindow);
-		} else if (ev.type == DestroyNotify) {
-			object_t *object;
-			
-			object = object_destroy(ev.xdestroywindow);
-			free(object);
-		} else if (ev.type == ConfigureNotify) {
+		if (ev.type == ConfigureNotify) {
+			printf("[event] Configurenotify received for window=%lu\n",
+					ev.xconfigure.window);
 			object_configure(ev.xconfigure);
+		} else if (ev.type == ReparentNotify) {
+			object_t *object;
+			object = object_destroy(ev.xreparent.window);
+			printf("[event[ Reparent notify received for window=%lu, parent=%lu\n",
+					ev.xreparent.window, ev.xreparent.parent);
+			free(object);
 		} else if (ev.type == MapNotify) {
 			object_t *object;
 			
@@ -60,7 +60,8 @@ void* event_function(void* param)
 			XDamageNotifyEvent *devent = (XDamageNotifyEvent*)&ev;
 			XDamageSubtract(conn, devent->damage, None, None);
 		
-			printf("[event] Received damage event, marking scene dirty.\n");
+			printf("[event] Received damage event for drawable=%lu, marking scene dirty.\n",
+					devent->drawable);
 			
 			/* Set the scene state to dirty and wake up the render thread */
 			pthread_mutex_lock(&scene_mutex);

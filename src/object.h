@@ -5,9 +5,9 @@
 
 object_t *object_get(Window id);
 
-object_t *object_create(XCreateWindowEvent event);
+object_t *object_create(Window id);
 
-object_t *object_destroy(XDestroyWindowEvent event);
+object_t *object_destroy(Window id);
 
 object_t *object_configure(XConfigureEvent event);
 
