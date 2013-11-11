@@ -3,6 +3,18 @@ Space Window Manager
 This is a project for the development of a Window Manager, currently
 going by the name of "space" because I couldn't think of anything better.
 
-<more details to be added>
+HOW TO RUN:
 
+1. Compilation should be pretty straight forward.
+2. Each of the components is in a different subdirectory under SRC
+3. 'cd' to the directories and run 'make'
+4. The best way to test the code is by running it under Xephyr
+5. Most linux distributions will have a package for it in their repositories
+6. First run Xephyr from a terminal: "Xephyr -ac -br -noreset -screen 1024x600 :1&"
+7. Next, set your DISPLAY variable: "DISPLAY=:1.0"
+8. Next, run the components, currently space-wm and space-int are working together:
+      "cd src/man/ && make && ./space-man"
+      "cd src/int/ && make && ./space-int"
+9. space-comp sort of works but it is very unstable:
+      "cd src/comp/ && make && ./space-comp"
 Space is distributed under MIT license. See LICENSE for more info.

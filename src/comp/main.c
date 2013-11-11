@@ -1,10 +1,6 @@
 #include "common.h"
 
 #include "event_thread.h"
-#include "render_thread.h"
-
-#include "scene.h"
-#include "viewport.h"
 #include "window.h"
 
 XRenderColor green = (XRenderColor){.alpha = 0xffff, .red = 0x0000, .green = 0xffff, .blue = 0x0000};

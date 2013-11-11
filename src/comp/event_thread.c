@@ -1,8 +1,5 @@
 #include "event_thread.h"
 
-#include "scene.h"
-#include "viewport.h"
-#include "object.h"
 #include "window.h"
 
 void event_function()

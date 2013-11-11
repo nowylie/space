@@ -137,10 +137,12 @@ void window_create(Window id)
 	
 	window->prev = NULL;
 	window->next = NULL;
+	window->pixmap = None;
+	window->picture = None;
 	
 	/* need to insert the window into the window list. Going to just
 		add it to the start of the list for convenience. */
-	window_list_append(id);
+	window_list_prepend(id);
 }
 
 void window_destroy(Window id)
@@ -188,6 +190,12 @@ void window_set_mapped(Window id, bool mapped)
 		format = XRenderFindVisualFormat(conn, visual);
 		pa.subwindow_mode = IncludeInferiors;
 		
+		if (window->picture != None)
+			XRenderFreePicture(conn, window->picture);
+		
+		if (window->pixmap != None)
+			XFreePixmap(conn, window->pixmap);
+		
 		window->pixmap = XCompositeNameWindowPixmap(conn, id);
 		window->picture = XRenderCreatePicture(conn, window->pixmap,
 				format, CPSubwindowMode, &pa);
@@ -195,9 +203,6 @@ void window_set_mapped(Window id, bool mapped)
 		
 		window_list_remove(id);
 		window_list_append(id);
-	} else {
-		/*XRenderFreePicture(conn, window->picture);*/
-		/*XFreePixmap(conn, window->pixmap);*/
 	}
 }
 
