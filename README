@@ -10,7 +10,7 @@ HOW TO RUN:
 3. 'cd' to the directories and run 'make'
 4. The best way to test the code is by running it under Xephyr
 5. Most linux distributions will have a package for it in their repositories
-6. First run Xephyr from a terminal: "Xephyr -ac -br -noreset -screen 1024x600 :1&"
+6. First run Xephyr: "Xephyr -ac -br -noreset -screen 1024x600 :1&"
 7. Next, set your DISPLAY variable: "DISPLAY=:1.0"
 8. Next, run the components, currently space-wm and space-int are working together:
       "cd src/man/ && make && ./space-man"
